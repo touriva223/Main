@@ -168,6 +168,8 @@
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <script>
         // Игровые переменные
         let coins = 0;
@@ -182,6 +184,7 @@
         const updateInterval = 50; // Обновляем каждые 50мс
         let gameInterval; // ID интервала игры
         let isPaused = false; // Состояние паузы
+        let lastSaveTime = Date.now(); // Время последнего сохранения
         
         // Элементы DOM
         const coinCountEl = document.getElementById('coinCount');
@@ -193,6 +196,79 @@
         const totalEarnedEl = document.getElementById('totalEarned');
         const upgradesBoughtEl = document.getElementById('upgradesBought');
         const pauseBtn = document.getElementById('pauseBtn');
+        
+        // Инициализация Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBeaTgOjckAtryczMlfDqEji9NHF7uY8DI",
+            authDomain: "torin-game.firebaseapp.com",
+            databaseURL: "https://torin-game-default-rtdb.firebaseio.com",
+            projectId: "torin-game",
+            storageBucket: "torin-game.firebasestorage.app",
+            messagingSenderId: "612353304943",
+            appId: "1:612353304943:web:9491e30422e11b8a8a609a",
+            measurementId: "G-R5T18G2022"
+        };
+        
+        // Инициализируем Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const gameDataRef = db.ref('gameData');
+        
+        // Загрузка данных из Firebase при старте
+        async function loadGameData() {
+            try {
+                const snapshot = await gameDataRef.once('value');
+                const data = snapshot.val();
+                
+                if (data) {
+                    coins = data.coins || 0;
+                    incomePerCycle = data.incomePerCycle || 1;
+                    upgradeCost = data.upgradeCost || 5;
+                    totalEarned = data.totalEarned || 0;
+                    upgradesBought = data.upgradesBought || 0;
+                    progress = data.progress || 0;
+                    
+                    // Рассчитываем монеты за время отсутствия
+                    const now = Date.now();
+                    const timeDiff = now - (data.lastSaveTime || now);
+                    const cyclesPassed = Math.floor(timeDiff / cycleDuration);
+                    
+                    if (cyclesPassed > 0 && !isPaused) {
+                        const earnedOffline = cyclesPassed * incomePerCycle;
+                        coins += earnedOffline;
+                        totalEarned += earnedOffline;
+                        alert(`Добро пожаловать! Пока вас не было, вы заработали ${earnedOffline} монет!`);
+                    }
+                    
+                    updateUI();
+                    progressBarEl.style.width = progress + '%';
+                    progressPercentEl.textContent = Math.floor(progress);
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+            }
+        }
+        
+        // Сохранение данных в Firebase
+        function saveGameData() {
+            gameDataRef.set({
+                coins: coins,
+                incomePerCycle: incomePerCycle,
+                upgradeCost: upgradeCost,
+                totalEarned: totalEarned,
+                upgradesBought: upgradesBought,
+                progress: progress,
+                lastSaveTime: Date.now()
+            }).catch(error => {
+                console.error('Ошибка сохранения данных:', error);
+            });
+        }
+        
+        // Автосохранение каждые 10 секунд
+        setInterval(saveGameData, 10000);
+        
+        // Сохранение при закрытии страницы
+        window.addEventListener('beforeunload', saveGameData);
         
         // Основной игровой цикл
         function startGameLoop() {
@@ -217,8 +293,10 @@
             }, updateInterval);
         }
         
-        // Запуск игрового цикла при загрузке
-        startGameLoop();
+        // Загрузка данных и запуск игры
+        loadGameData().then(() => {
+            startGameLoop();
+        });
         
         // Функция переключения паузы
         function togglePause() {
@@ -226,9 +304,11 @@
             if (isPaused) {
                 pauseBtn.textContent = 'Запуск';
                 pauseBtn.className = 'admin-btn btn-play';
+                saveGameData(); // Сохраняем при паузе
             } else {
                 pauseBtn.textContent = 'Пауза';
                 pauseBtn.className = 'admin-btn btn-pause';
+                lastSaveTime = Date.now(); // Сбрасываем время при возобновлении
             }
         }
         
@@ -243,6 +323,7 @@
             updateUI();
             progressBarEl.style.width = '0%';
             progressPercentEl.textContent = '0';
+            saveGameData(); // Сохраняем сброс в базу
         }
         
         // Покупка улучшения
@@ -253,6 +334,7 @@
                 upgradeCost = Math.floor(upgradeCost * 1.5); // Цена растет на 50%
                 upgradesBought++;
                 updateUI();
+                saveGameData(); // Сохраняем после покупки
             }
         }
         
