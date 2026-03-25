@@ -13,6 +13,56 @@
             min-height: 100vh;
             margin: 0;
             color: white;
+            position: relative;
+        }
+        .admin-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .admin-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .admin-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+        .btn-pause {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn-pause:hover {
+            background: #c0392b;
+        }
+        .btn-play {
+            background: #27ae60;
+            color: white;
+        }
+        .btn-play:hover {
+            background: #219a52;
+        }
+        .btn-reset {
+            background: #3498db;
+            color: white;
+        }
+        .btn-reset:hover {
+            background: #2980b9;
         }
         .game-container {
             background: rgba(255, 255, 255, 0.95);
@@ -84,6 +134,13 @@
     </style>
 </head>
 <body>
+    <!-- Админ-панель -->
+    <div class="admin-panel">
+        <h3>Админ</h3>
+        <button class="admin-btn btn-pause" id="pauseBtn" onclick="togglePause()">Пауза</button>
+        <button class="admin-btn btn-reset" onclick="resetGame()">Сброс</button>
+    </div>
+
     <div class="game-container">
         <h1>Idle Game</h1>
         
@@ -123,6 +180,8 @@
         let progress = 0;
         const cycleDuration = 3000; // 3 секунды
         const updateInterval = 50; // Обновляем каждые 50мс
+        let gameInterval; // ID интервала игры
+        let isPaused = false; // Состояние паузы
         
         // Элементы DOM
         const coinCountEl = document.getElementById('coinCount');
@@ -133,25 +192,58 @@
         const upgradeBtn = document.getElementById('upgradeBtn');
         const totalEarnedEl = document.getElementById('totalEarned');
         const upgradesBoughtEl = document.getElementById('upgradesBought');
+        const pauseBtn = document.getElementById('pauseBtn');
         
         // Основной игровой цикл
-        setInterval(() => {
-            // Увеличиваем прогресс
-            progress += (updateInterval / cycleDuration) * 100;
-            
-            // Если прогресс заполнен
-            if (progress >= 100) {
-                progress = 0;
-                coins += incomePerCycle;
-                totalEarned += incomePerCycle;
-                updateUI();
+        function startGameLoop() {
+            gameInterval = setInterval(() => {
+                if (isPaused) return;
+                
+                // Увеличиваем прогресс
+                progress += (updateInterval / cycleDuration) * 100;
+                
+                // Если прогресс заполнен
+                if (progress >= 100) {
+                    progress = 0;
+                    coins += incomePerCycle;
+                    totalEarned += incomePerCycle;
+                    updateUI();
+                }
+                
+                // Обновляем визуальную часть бара
+                progressBarEl.style.width = progress + '%';
+                progressPercentEl.textContent = Math.floor(progress);
+                
+            }, updateInterval);
+        }
+        
+        // Запуск игрового цикла при загрузке
+        startGameLoop();
+        
+        // Функция переключения паузы
+        function togglePause() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseBtn.textContent = 'Запуск';
+                pauseBtn.className = 'admin-btn btn-play';
+            } else {
+                pauseBtn.textContent = 'Пауза';
+                pauseBtn.className = 'admin-btn btn-pause';
             }
-            
-            // Обновляем визуальную часть бара
-            progressBarEl.style.width = progress + '%';
-            progressPercentEl.textContent = Math.floor(progress);
-            
-        }, updateInterval);
+        }
+        
+        // Функция сброса игры
+        function resetGame() {
+            coins = 0;
+            incomePerCycle = 1;
+            upgradeCost = 5;
+            totalEarned = 0;
+            upgradesBought = 0;
+            progress = 0;
+            updateUI();
+            progressBarEl.style.width = '0%';
+            progressPercentEl.textContent = '0';
+        }
         
         // Покупка улучшения
         function buyUpgrade() {
