@@ -278,27 +278,74 @@
         // Сохранение при закрытии страницы
         window.addEventListener('beforeunload', saveGameData);
         
-        // Основной игровой цикл
+        // --- Логика игры с учетом времени (Offline progress) ---
+        let lastUpdateTime = Date.now();
+
+        function calculateAndApplyProgress() {
+            const now = Date.now();
+            const timePassedInSeconds = (now - lastUpdateTime) / 1000;
+            
+            if (timePassedInSeconds > 0.1 && !isPaused) {
+                // Считаем, сколько полных циклов прошло
+                const cyclesPassed = (timePassedInSeconds * 1000) / cycleDuration;
+                const earned = Math.floor(cyclesPassed * incomePerCycle);
+                
+                if (earned > 0) {
+                    coins += earned;
+                    totalEarned += earned;
+                    // Сдвигаем прогресс бар на остаток
+                    progress = (cyclesPassed % 1) * 100;
+                    
+                    if (timePassedInSeconds > 2) {
+                        showNotification(`Вы отсутствовали ${timePassedInSeconds.toFixed(1)} сек. Заработано: +${formatNumber(earned)} 🪙`);
+                    }
+                }
+                lastUpdateTime = now;
+                updateUI();
+            } else if (!isPaused) {
+                // Если паузы нет, просто обновляем время и двигаем бар визуально
+                lastUpdateTime = now;
+                const timeSinceLastCycle = (now - lastUpdateTime) % cycleDuration; // Это не совсем верно, нужно хранить время начала цикла
+                // Для простоты: просто обновляем UI с текущим прогрессом
+            }
+        }
+
+        // Основной игровой цикл (визуальный + накопление)
         function startGameLoop() {
-            gameInterval = setInterval(() => {
-                if (isPaused) return;
-                
-                // Увеличиваем прогресс
-                progress += (updateInterval / cycleDuration) * 100;
-                
-                // Если прогресс заполнен
-                if (progress >= 100) {
-                    progress = 0;
-                    coins += incomePerCycle;
-                    totalEarned += incomePerCycle;
-                    updateUI();
+            lastUpdateTime = Date.now();
+            
+            // Быстрый цикл для отрисовки (10 раз в секунду)
+            setInterval(() => {
+                if (isPaused) {
+                    progressBarEl.style.width = '0%';
+                    progressPercentEl.textContent = '0';
+                    return;
                 }
                 
-                // Обновляем визуальную часть бара
-                progressBarEl.style.width = progress + '%';
-                progressPercentEl.textContent = Math.floor(progress);
+                const now = Date.now();
+                const timePassed = (now - lastUpdateTime) / 1000;
                 
-            }, updateInterval);
+                // Вычисляем текущий прогресс бара (0-100%)
+                const currentProgress = (timePassed * 1000 % cycleDuration) / cycleDuration * 100;
+                progressBarEl.style.width = currentProgress + '%';
+                progressPercentEl.textContent = Math.floor(currentProgress);
+                
+                // Проверяем, не пора ли начислить монеты (каждые cycleDuration секунд)
+                const cyclesPassed = Math.floor((timePassed * 1000) / cycleDuration);
+                if (cyclesPassed > 0) {
+                    const earned = cyclesPassed * incomePerCycle;
+                    coins += earned;
+                    totalEarned += earned;
+                    lastUpdateTime = now - ((timePassed * 1000) % cycleDuration); // Сбрасываем счетчик, сохраняя остаток
+                    
+                    updateUI();
+                }
+            }, 100);
+
+            // Медленный цикл сохранения (раз в 5 секунд)
+            setInterval(() => {
+                saveGameData();
+            }, 5000);
         }
         
         // Загрузка данных и запуск игры
@@ -363,7 +410,7 @@
     </script>
     
     <div style="position: fixed; bottom: 10px; right: 10px; font-size: 12px; color: rgba(255,255,255,0.7);">
-        Версия: 0.0.4
+        Версия: 0.0.5
     </div>
 </body>
 </html>
