@@ -1,1 +1,183 @@
-{тестовый файл}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idle Game</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            color: white;
+        }
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px;
+            margin: 0 auto;
+            color: #333;
+        }
+        h1 { margin-top: 0; color: #667eea; }
+        .coins {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #f39c12;
+        }
+        .progress-container {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+            position: relative;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 15px;
+            transition: width 0.1s linear;
+        }
+        .info {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .upgrade-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        .upgrade-btn:hover:not(:disabled) {
+            background: #219a52;
+            transform: translateY(-2px);
+        }
+        .upgrade-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Idle Game</h1>
+        
+        <div class="coins">
+            Монеты: <span id="coinCount">0</span>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="info">
+            <span>Доход за цикл: <b id="incomePerCycle">1</b></span>
+            <span>Прогресс: <span id="progressPercent">0</span>%</span>
+        </div>
+        
+        <button class="upgrade-btn" id="upgradeBtn" onclick="buyUpgrade()">
+            ⬆️ Улучшить (+1 монета) <br>
+            <small>Цена: <span id="upgradeCost">5</span> монет</small>
+        </button>
+        
+        <div class="stats">
+            <div>Всего заработано: <b id="totalEarned">0</b></div>
+            <div>Куплено улучшений: <b id="upgradesBought">0</b></div>
+        </div>
+    </div>
+
+    <script>
+        // Игровые переменные
+        let coins = 0;
+        let incomePerCycle = 1;
+        let upgradeCost = 5;
+        let totalEarned = 0;
+        let upgradesBought = 0;
+        
+        // Переменные прогресс-бара
+        let progress = 0;
+        const cycleDuration = 3000; // 3 секунды
+        const updateInterval = 50; // Обновляем каждые 50мс
+        
+        // Элементы DOM
+        const coinCountEl = document.getElementById('coinCount');
+        const progressBarEl = document.getElementById('progressBar');
+        const progressPercentEl = document.getElementById('progressPercent');
+        const incomePerCycleEl = document.getElementById('incomePerCycle');
+        const upgradeCostEl = document.getElementById('upgradeCost');
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        const totalEarnedEl = document.getElementById('totalEarned');
+        const upgradesBoughtEl = document.getElementById('upgradesBought');
+        
+        // Основной игровой цикл
+        setInterval(() => {
+            // Увеличиваем прогресс
+            progress += (updateInterval / cycleDuration) * 100;
+            
+            // Если прогресс заполнен
+            if (progress >= 100) {
+                progress = 0;
+                coins += incomePerCycle;
+                totalEarned += incomePerCycle;
+                updateUI();
+            }
+            
+            // Обновляем визуальную часть бара
+            progressBarEl.style.width = progress + '%';
+            progressPercentEl.textContent = Math.floor(progress);
+            
+        }, updateInterval);
+        
+        // Покупка улучшения
+        function buyUpgrade() {
+            if (coins >= upgradeCost) {
+                coins -= upgradeCost;
+                incomePerCycle += 1;
+                upgradeCost = Math.floor(upgradeCost * 1.5); // Цена растет на 50%
+                upgradesBought++;
+                updateUI();
+            }
+        }
+        
+        // Обновление интерфейса
+        function updateUI() {
+            coinCountEl.textContent = coins;
+            incomePerCycleEl.textContent = incomePerCycle;
+            upgradeCostEl.textContent = upgradeCost;
+            totalEarnedEl.textContent = totalEarned;
+            upgradesBoughtEl.textContent = upgradesBought;
+            
+            // Блокируем кнопку, если не хватает монет
+            upgradeBtn.disabled = coins < upgradeCost;
+        }
+        
+        // Инициализация
+        updateUI();
+    </script>
+</body>
+</html>
